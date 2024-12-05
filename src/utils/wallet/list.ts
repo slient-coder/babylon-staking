@@ -1,9 +1,12 @@
+import {unisatProvider, UniSatWallet} from "@/utils/wallet/providers/unisat_wallet";
+
 import bitgetWalletIcon from "./icons/bitget.svg";
 import cactusIcon from "./icons/cactuslink.svg";
 import keystoneIcon from "./icons/keystone.svg";
 import okxIcon from "./icons/okx.svg";
 import oneKeyIcon from "./icons/onekey.svg";
 import tomoIcon from "./icons/tomo.svg";
+import unisatIcon from "./icons/unisat.svg";
 import { BitgetWallet, bitgetWalletProvider } from "./providers/bitget_wallet";
 import {
   CactusLinkWallet,
@@ -35,6 +38,14 @@ export const walletList: IntegratedWallet[] = [
     wallet: OKXWallet,
     provider: okxProvider,
     linkToDocs: "https://www.okx.com/web3",
+    supportedNetworks: [Network.MAINNET, Network.SIGNET],
+  },
+  {
+    name: "UniSat Wallet",
+    icon: unisatIcon,
+    wallet: UniSatWallet,
+    provider: unisatProvider,
+    linkToDocs: "https://unisat.io",
     supportedNetworks: [Network.MAINNET, Network.SIGNET],
   },
   {
