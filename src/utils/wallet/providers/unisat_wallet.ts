@@ -187,7 +187,7 @@ export class UniSatWallet extends WalletProvider {
     return await getTipHeight();
   };
 
-  async getInscriptions(): Promise<InscriptionIdentifier[]> {
+  getInscriptions = async (): Promise<InscriptionIdentifier[]> =>{
 
     // max num of iterations to prevent infinite loop
     const MAX_ITERATIONS = 100;
@@ -196,6 +196,7 @@ export class UniSatWallet extends WalletProvider {
     const inscriptionIdentifiers: InscriptionIdentifier[] = [];
     let cursor = 0;
     let iterations = 0;
+
     try {
       while (iterations < MAX_ITERATIONS) {
         const { list } = await this.provider.getInscriptions(
@@ -222,7 +223,7 @@ export class UniSatWallet extends WalletProvider {
         }
       }
     } catch (error) {
-      throw new Error("Failed to get inscriptions from OKX Wallet");
+      throw new Error("Failed to get inscriptions from UniSat Wallet");
     }
 
     return inscriptionIdentifiers;
