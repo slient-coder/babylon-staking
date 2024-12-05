@@ -106,7 +106,7 @@ export class UniSatWallet extends WalletProvider {
   };
 
   getWalletProviderName = async (): Promise<string> => {
-    return "unisat";
+    return "UniSat";
   };
 
   getAddress = async (): Promise<string> => {
@@ -147,7 +147,10 @@ export class UniSatWallet extends WalletProvider {
   };
 
   getNetwork = async (): Promise<Network> => {
-    return Network.SIGNET;
+    if (!this.networkEnv) {
+      throw new Error("Network not set");
+    }
+    return this.networkEnv;
   };
 
   on = (eventName: string, callBack: () => void) => {
