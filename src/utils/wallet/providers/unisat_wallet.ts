@@ -1,11 +1,17 @@
-import { getNetworkConfig, network, validateAddress } from "@/config/network.config";
+import { Psbt, address, networks } from "bitcoinjs-lib";
+
+import {
+  getNetworkConfig,
+  network,
+  validateAddress,
+} from "@/config/network.config";
 
 import {
   getAddressBalance,
   getFundingUTXOs,
   getNetworkFees,
   getTipHeight,
-  pushTx
+  pushTx,
 } from "../../mempool_api";
 import {
   Fees,
@@ -13,12 +19,11 @@ import {
   Network,
   UTXO,
   WalletInfo,
-  WalletProvider
+  WalletProvider,
 } from "../wallet_provider";
 
 // window object for UniSat Wallet extension
 export const unisatProvider = "unisat";
-
 
 enum ChainType {
   BITCOIN_MAINNET = "BITCOIN_MAINNET",
@@ -29,11 +34,9 @@ enum ChainType {
 }
 
 export class UniSatWallet extends WalletProvider {
-
   private unisatWalletInfo: WalletInfo | undefined;
   private networkEnv: Network | undefined;
   private chainType: ChainType | undefined;
-
 
   constructor() {
     super();
@@ -53,7 +56,6 @@ export class UniSatWallet extends WalletProvider {
       default:
         throw new Error("Unsupported network");
     }
-
   }
 
   private get provider() {
@@ -61,7 +63,6 @@ export class UniSatWallet extends WalletProvider {
   }
 
   connectWallet = async (): Promise<this> => {
-
     // check whether there is an UniSat Wallet extension
     if (!this.provider) {
       throw new Error("UniSat Wallet extension not found");
@@ -88,7 +89,7 @@ export class UniSatWallet extends WalletProvider {
     if (pubkey && address) {
       this.unisatWalletInfo = {
         publicKeyHex: pubkey,
-        address
+        address,
       };
       return this;
     } else {
@@ -98,9 +99,11 @@ export class UniSatWallet extends WalletProvider {
 
   checkNetwork = async (): Promise<void> => {
     if (this.provider.getChain == undefined) {
-      throw new Error("Please update your UniSat Wallet to the latest version.");
+      throw new Error(
+        "Please update your UniSat Wallet to the latest version.",
+      );
     }
-    if (this.chainType !== await this.provider.getChain()) {
+    if (this.chainType !== (await this.provider.getChain())) {
       await this.provider.switchChain(this.chainType);
     }
   };
@@ -123,12 +126,65 @@ export class UniSatWallet extends WalletProvider {
     return this.unisatWalletInfo.publicKeyHex;
   };
 
+  private getSignPsbtDefaultOptions(psbtHex: string) {
+    const toSignInputs: any[] = [];
+    const psbt = Psbt.fromHex(psbtHex);
+    psbt.data.inputs.forEach((input, index) => {
+      const signed = input.finalScriptSig || input.finalScriptWitness;
+
+      let useTweakedSigner = false;
+      if (input.witnessUtxo && input.witnessUtxo.script) {
+        let network = networks.bitcoin;
+        if (this.networkEnv === Network.TESTNET) {
+          network = networks.testnet;
+        } else if (this.networkEnv === Network.SIGNET) {
+          network = networks.testnet;
+        }
+
+        const addressToBeSigned = address.fromOutputScript(
+          input.witnessUtxo.script,
+          network,
+        );
+
+        // check if the address is a taproot address
+        const isTaproot =
+          addressToBeSigned.indexOf("tb1p") === 0 ||
+          addressToBeSigned.indexOf("bc1p") === 0;
+
+        // check if the address is the same as the wallet address
+        const isWalletAddress =
+          addressToBeSigned === this.unisatWalletInfo?.address;
+
+        if (isTaproot && isWalletAddress) {
+          useTweakedSigner = true;
+        }
+      }
+
+      if (!signed) {
+        toSignInputs.push({
+          index,
+          publicKey: this.unisatWalletInfo?.publicKeyHex,
+          sighashTypes: undefined,
+          useTweakedSigner,
+        });
+      }
+    });
+    return {
+      autoFinalized: true,
+      toSignInputs,
+    };
+  }
+
   signPsbt = async (psbtHex: string): Promise<string> => {
     if (!this.unisatWalletInfo) {
       throw new Error("UniSat Wallet not connected");
     }
+
     // sign the PSBT
-    return await this.provider.signPsbt(psbtHex);
+    return await this.provider.signPsbt(
+      psbtHex,
+      this.getSignPsbtDefaultOptions(psbtHex),
+    );
   };
 
   signPsbts = async (psbtsHexes: string[]): Promise<string[]> => {
@@ -136,7 +192,10 @@ export class UniSatWallet extends WalletProvider {
       throw new Error("UniSat Wallet not connected");
     }
     // sign the PSBTs
-    return await this.provider.signPsbts(psbtsHexes);
+    return await this.provider.signPsbts(
+      psbtsHexes,
+      psbtsHexes.map((v) => this.getSignPsbtDefaultOptions(v)),
+    );
   };
 
   signMessageBIP322 = async (message: string): Promise<string> => {
@@ -187,8 +246,7 @@ export class UniSatWallet extends WalletProvider {
     return await getTipHeight();
   };
 
-  getInscriptions = async (): Promise<InscriptionIdentifier[]> =>{
-
+  getInscriptions = async (): Promise<InscriptionIdentifier[]> => {
     // max num of iterations to prevent infinite loop
     const MAX_ITERATIONS = 100;
     // Fetch inscriptions in batches of 100
@@ -199,15 +257,12 @@ export class UniSatWallet extends WalletProvider {
 
     try {
       while (iterations < MAX_ITERATIONS) {
-        const { list } = await this.provider.getInscriptions(
-          cursor,
-          limit
-        );
+        const { list } = await this.provider.getInscriptions(cursor, limit);
         const identifiers = list.map((i: { output: string }) => {
           const [txid, vout] = i.output.split(":");
           return {
             txid,
-            vout
+            vout,
           };
         });
         inscriptionIdentifiers.push(...identifiers);
@@ -218,7 +273,7 @@ export class UniSatWallet extends WalletProvider {
         iterations++;
         if (iterations >= MAX_ITERATIONS) {
           throw new Error(
-            "Exceeded maximum iterations when fetching inscriptions"
+            "Exceeded maximum iterations when fetching inscriptions",
           );
         }
       }
@@ -227,5 +282,5 @@ export class UniSatWallet extends WalletProvider {
     }
 
     return inscriptionIdentifiers;
-  }
+  };
 }

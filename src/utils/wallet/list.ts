@@ -1,4 +1,7 @@
-import {unisatProvider, UniSatWallet} from "@/utils/wallet/providers/unisat_wallet";
+import {
+  UniSatWallet,
+  unisatProvider,
+} from "@/utils/wallet/providers/unisat_wallet";
 
 import bitgetWalletIcon from "./icons/bitget.svg";
 import cactusIcon from "./icons/cactuslink.svg";

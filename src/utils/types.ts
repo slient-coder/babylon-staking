@@ -10,6 +10,6 @@ declare global {
     $onekey: any;
     bitkeep: any;
     cactuslink: any;
-    unisat:any;
+    unisat: any;
   }
 }
