@@ -181,10 +181,21 @@ export class UniSatWallet extends WalletProvider {
     }
 
     // sign the PSBT
-    return await this.provider.signPsbt(
+    const signedHex = await this.provider.signPsbt(
       psbtHex,
       this.getSignPsbtDefaultOptions(psbtHex),
     );
+
+    let retHex = signedHex;
+
+    try {
+      let psbt = Psbt.fromHex(signedHex);
+      psbt.finalizeAllInputs();
+      retHex = psbt.toHex();
+    } catch (e) {
+      console.log(e);
+    }
+    return retHex;
   };
 
   signPsbts = async (psbtsHexes: string[]): Promise<string[]> => {
