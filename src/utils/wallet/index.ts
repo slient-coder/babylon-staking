@@ -17,11 +17,12 @@ export const toNetwork = (network: Network): networks.Network => {
   }
 };
 
-export const isSupportedAddressType = (address: string): boolean => {
-  return (
-    address.length === nativeSegwitAddressLength ||
-    address.length === taprootAddressLength
-  );
+export const isSupportedAddressType = (address: string) => {
+  return true;
+  // return (
+  //   address.length === nativeSegwitAddressLength ||
+  //   address.length === taprootAddressLength
+  // );
 };
 
 export const isTaproot = (address: string): boolean => {
