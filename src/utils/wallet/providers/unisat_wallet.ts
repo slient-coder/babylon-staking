@@ -203,10 +203,23 @@ export class UniSatWallet extends WalletProvider {
       throw new Error("UniSat Wallet not connected");
     }
     // sign the PSBTs
-    return await this.provider.signPsbts(
+    const signedHexs = await this.provider.signPsbts(
       psbtsHexes,
       psbtsHexes.map((v) => this.getSignPsbtDefaultOptions(v)),
     );
+
+    let retHexs: string[] = signedHexs;
+
+    try {
+      retHexs = signedHexs.map((signedHex: string) => {
+        let psbt = Psbt.fromHex(signedHex);
+        psbt.finalizeAllInputs();
+        return psbt.toHex();
+      });
+    } catch (e) {
+      console.log(e);
+    }
+    return retHexs;
   };
 
   signMessageBIP322 = async (message: string): Promise<string> => {
